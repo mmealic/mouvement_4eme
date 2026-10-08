@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>En mouvement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@500;700&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: four stations in a row of tabs; each station = simulation card, notebook note, questions. A notebook drawer collects all notes. */
+:root{
+  --bg:#eef2f6; --card:#ffffff; --ink:#172031; --muted:#576277; --line:#d1d8e2;
+  --s1:#7a3fd1; --s2:#e2581c; --s3:#14866d; --s4:#1f62d6;
+  --paper:#fffdf7; --rule:#c8d9ef; --margin:#e5737a; --mark:#ffe36e; --pen:#1d3d8f;
+  --ok:#1b7f45; --ok-bg:#dcf3e4; --bad:#b92a36; --bad-bg:#fbe1e3;
+  --sky:#d9ecfb; --ground:#9ccc7a; --road:#3d4552;
+  --display:"Fredoka","Trebuchet MS",system-ui,sans-serif; --body:"Atkinson Hyperlegible",Verdana,system-ui,sans-serif; --hand:"Patrick Hand","Comic Sans MS",cursive;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#121823; --card:#1b2332; --ink:#edf1f8; --muted:#a3adc2; --line:#334055;
+    --s1:#b591ff; --s2:#ff8a57; --s3:#4fd1ae; --s4:#7aa8ff; --paper:#f7f4ea; --ok:#6bd896; --ok-bg:#173d2a; --bad:#ff8d94; --bad-bg:#4a1f25;
+    --sky:#1f3550; --ground:#3f6b37; --road:#2a303a; color-scheme:dark; }
+}
+:root[data-theme="dark"]{ --bg:#121823; --card:#1b2332; --ink:#edf1f8; --muted:#a3adc2; --line:#334055;
+  --s1:#b591ff; --s2:#ff8a57; --s3:#4fd1ae; --s4:#7aa8ff; --paper:#f7f4ea; --ok:#6bd896; --ok-bg:#173d2a; --bad:#ff8d94; --bad-bg:#4a1f25;
+  --sky:#1f3550; --ground:#3f6b37; --road:#2a303a; color-scheme:dark; }
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink); font:400 17px/1.5 var(--body)}
+.wrap{max-width:1000px; margin:0 auto; padding-inline:16px; padding-block:14px 60px}
+button{font:inherit; color:inherit; cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--s4); outline-offset:2px}
+header{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+header h1{font:700 clamp(26px,5vw,38px)/1.1 var(--display); margin:0 auto 0 0}
+.pill{background:var(--card); border:2px solid var(--line); border-radius:999px; padding:4px 12px; font-weight:700; font-size:15px}
+button.pill{border-color:var(--ink)}
+.sub{color:var(--muted); margin:4px 0 14px}
+nav{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px}
+@media (max-width:640px){nav{grid-template-columns:1fr 1fr}}
+.st{border:2px solid var(--line); border-bottom-width:5px; border-radius:16px; background:var(--card); padding:10px 12px; text-align:left}
+.st b{display:block; font:700 17px/1.2 var(--display)} .st span{font-size:14px; color:var(--muted)}
+.st[aria-selected="true"]{border-color:var(--zc); background:color-mix(in srgb,var(--zc) 12%,var(--card))}
+.st i{font-style:normal; font-weight:700; font-size:13px; color:var(--zc); display:block; margin-top:2px}
+main{margin-top:14px}
+.intro h2{font:700 26px/1.2 var(--display); margin:0 0 10px; color:var(--zc)}
+.sim+.sim{margin-top:14px}
+.lanes .btn{padding:4px 10px; font-size:14px}
+.intro p{margin:0 0 12px; max-width:60ch}
+.sim{background:var(--card); border:2px solid var(--line); border-radius:20px; padding:14px}
+.sim h3,.qs h3{font:700 19px var(--display); margin:0 0 8px}
+.sim svg{display:block; width:100%; height:auto; border-radius:12px; touch-action:none}
+.ctl{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px}
+.btn{border:2px solid var(--ink); border-bottom-width:4px; border-radius:12px; background:var(--card); padding:8px 14px; font-weight:700; user-select:none; -webkit-user-select:none}
+.btn.on,.btn[aria-pressed="true"]{background:var(--ink); color:var(--card)}
+.btn.big{font:700 19px var(--display); padding:12px 20px; min-width:130px}
+.btn.gas{border-color:var(--s3)} .btn.brk{border-color:var(--bad)}
+.btn.gas.on{background:var(--s3); color:#fff} .btn.brk.on{background:var(--bad); color:#fff}
+.lab{font-weight:700; font-size:14px; color:var(--muted); margin-right:2px}
+.read{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:8px; font-variant-numeric:tabular-nums}
+.read b{font:700 22px var(--display)}
+.tag{display:inline-block; border-radius:999px; padding:3px 12px; font-weight:700; color:#fff; background:var(--zc)}
+.sl{display:block; flex:1 1 220px; font-weight:700; font-size:15px; color:var(--muted)}
+.sl input{display:block; width:100%; accent-color:var(--zc); height:28px}
+.mis{list-style:none; padding:0; margin:10px 0 0; display:grid; gap:6px}
+.mis li{border:2px solid var(--line); border-radius:12px; padding:6px 10px; background:var(--bg)}
+.mis li.done{border-color:var(--ok); background:var(--ok-bg)} .mis li.cur{border-color:var(--zc)}
+.formula{font:700 22px var(--display); background:var(--bg); border-radius:12px; padding:8px 12px; margin-top:10px; font-variant-numeric:tabular-nums}
+.note{margin:18px 0; background:#fffefb; color:#1e2533; border:1px solid var(--line); border-radius:4px; padding:6px 16px 10px; font:400 17.5px/28px "Nunito",var(--body);
+  background-image:repeating-linear-gradient(transparent 0 27px,#dfe8f3 27px 28px); background-position:0 6px}
+.note .nh{font-weight:400; font-size:14px; color:#6b7280}
+.note h4{font:600 19px/28px "Nunito",var(--body); margin:0; text-decoration:underline; text-underline-offset:4px}
+.note p{margin:0} .note b,.note strong{font-weight:400}
+.note mark{background:#fff27a; color:inherit; padding:0 2px; font-weight:400}
+.note .f{text-decoration:underline; text-underline-offset:4px}
+.qs{margin-top:6px; display:grid; gap:12px}
+.q{border:2px solid var(--line); border-radius:14px; padding:12px; background:var(--card)}
+.q>p{margin:0 0 8px; font-weight:700}
+.q svg{display:block; width:100%; max-width:440px; height:auto; margin:0 0 8px}
+.opts{display:grid; gap:6px}
+.opt{text-align:left; border:2px solid var(--line); border-bottom-width:3px; border-radius:10px; background:var(--bg); padding:8px 12px}
+.opt.good{border-color:var(--ok); background:var(--ok-bg)} .opt.wrong{border-color:var(--bad); background:var(--bad-bg)}
+.opt:disabled{cursor:default; color:inherit}
+.num{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.num input{width:130px; font:700 18px var(--body); color:var(--ink); background:var(--bg); border:2px solid var(--line); border-radius:10px; padding:6px 10px}
+.why{margin:8px 0 0; font-size:15px} .why b{color:var(--ok)} .why b.no{color:var(--bad)}
+.nextb{margin-top:16px}
+.drawer{position:fixed; inset:0; background:rgba(10,14,24,.55); display:flex; justify-content:flex-end; z-index:5}
+.drawer[hidden]{display:none}
+.dpanel{background:var(--bg); width:min(560px,100%); height:100%; overflow-y:auto; padding:16px; padding-top:calc(16px + env(safe-area-inset-top,0px))}
+.dpanel header{margin-bottom:6px}
+.dpanel h2{font:700 24px var(--display); margin:0 auto 0 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+  <header><h1 id="h1"></h1><span class="pill" id="score"></span></header>
+  <nav id="nav" role="tablist"></nav>
+  <main id="main"></main>
+</div>
+<div class="drawer" id="drawer" hidden><div class="dpanel"><header><h2 id="dh"></h2><button class="pill" id="dclose"></button></header><p class="sub" id="dsub"></p><div id="dnotes"></div></div></div>
+<script>
+const B=(fr,en)=>({fr,en}); let LANG="fr";
+
+const T=x=>x==null?"":typeof x==="string"?x:(x[LANG]!=null?x[LANG]:x.fr);
+const fmt=n=>{ let s=String(n); if(Math.abs(n)>=10000) s=s.replace(/\B(?=(\d{3})+(?!\d))/g,LANG==="fr"?" ":","); return LANG==="fr"?s.replace(".",","):s; };
+const r2=x=>Math.round(x*100)/100;
+const UI={
+ h1:B("En mouvement","On the move"), sub:B("Physique-chimie, 4e. Quatre étapes : décrire un mouvement, conduire, calculer une distance, changer de point de vue.","Physics, Year 8. Four stages: describe a motion, drive, calculate a distance, change your point of view."),
+ score:B("bonnes réponses","correct"), lang:B("English","Français"), nb:B("Mon cahier","My notebook"), close:B("Fermer","Close"),
+ dsub:B("Voici tout ce qu'il faut recopier dans ton cahier, étape par étape.","Here is everything to copy into your notebook, stage by stage."),
+ note:B("À noter dans le cahier","Copy into your notebook"), qs:B("Vérifie que tu as compris","Check you understood"), yes:B("Oui.","Yes."), no:B("Non.","No."),
+ check:B("Vérifier","Check"), next:B("Étape suivante →","Next stage →"), ans:B("Réponse","Answer"),
+ play:B("▶ Lancer","▶ Start"), again:B("↻ Recommencer","↻ Restart"),
+ ex:B("Exemples","Examples"), traj:B("Trajectoire","Path"),
+ presets:[["🍎",B("Pomme qui tombe","Falling apple"),"drop","a"],["🚗",B("Voiture au feu rouge","Car at a red light"),"line","r"],["🎡",B("Grande roue","Ferris wheel"),"circle","u"],["🛷",B("Luge qui descend","Sledge going downhill"),"curve","a"],["🧳",B("Tapis roulant","Moving walkway"),"line","u"],["🏀",B("Ballon lancé","Thrown ball"),"throw","t"]],
+ throwName:B("Mouvement curviligne : le ballon ralentit en montant, accélère en descendant","Curved motion: the ball slows down going up, speeds up coming down"), speed:B("Vitesse","Speed"),
+ trajs:{line:B("Rectiligne","Straight"),circle:B("Circulaire","Circular"),curve:B("Curviligne","Curved")},
+ kinds:{u:B("Uniforme","Constant"),a:B("Accélérée","Speeding up"),r:B("Ralentie","Slowing down")},
+ mvtName:(tr,k)=>LANG==="fr"?`Mouvement ${({line:"rectiligne",circle:"circulaire",curve:"curviligne"})[tr]} ${({u:"uniforme",a:"accéléré",r:"ralenti"})[k]}`:`${({line:"Straight-line",circle:"Circular",curve:"Curved"})[tr]} motion, ${({u:"constant speed",a:"speeding up",r:"slowing down"})[k]}`,
+ gas:B("Accélérer","Accelerate"), brake:B("Freiner","Brake"), keys:B("Clavier : flèche droite pour accélérer, flèche gauche pour freiner.","Keyboard: right arrow to accelerate, left arrow to brake."),
+ status:{a:B("Mouvement accéléré","Speeding up"),u:B("Vitesse constante","Constant speed"),r:B("Mouvement ralenti","Slowing down"),s:B("À l'arrêt","Stopped")},
+ missions:[B("Démarre et atteins 50 km/h.","Start and reach 50 km/h."),B("Garde une vitesse entre 45 et 55 km/h pendant 3 secondes.","Keep a speed between 45 and 55 km/h for 3 seconds."),B("Freine jusqu'à l'arrêt complet.","Brake to a complete stop.")],
+ bravo:B("Missions réussies. Regarde les traces sur la route : espacées quand tu allais vite, serrées quand tu ralentissais.","Missions complete. Look at the marks on the road: far apart when you were fast, close together when you slowed down."),
+ guess:B("Qui est qui ?","Who is who?"), newRace:B("↻ Nouvelle course","↻ New race"), reveal:B("Vérifier","Check"),
+ runners:["🏃","🐇","🐢","🚲","🛴","🐕","🦆"], shortK:{u:B("uniforme","constant"),a:B("accéléré","speeding up"),r:B("ralenti","slowing down")},
+ movers:[[B("Piéton","Walker"),5,"🚶"],[B("Cycliste","Cyclist"),20,"🚴"],[B("Voiture","Car"),90,"🚗"],[B("Guépard","Cheetah"),110,"🐆"],[B("TGV","High-speed train"),300,"🚄"],[B("Avion","Plane"),900,"✈️"]],
+ dur:B("Durée t","Time t"), trip:B("Combien de temps pour faire le trajet ?","How long does the trip take?"), conv:B("Convertir une vitesse","Converting a speed"),
+ trips:[["🏫",B("Maison → collège","Home → school"),1.5],["🏅",B("Un marathon","A marathon"),42.195],["🚵",B("Une étape du Tour de France","A Tour de France stage"),180],["🗺️",B("Paris → Marseille (route)","Paris → Marseille (road)"),775]], frames:{carou:B("Le manège","The merry-go-round"),train:B("Le train","The train"),para:B("Le parachute","The parachute"),moon:B("La Lune","The Moon")},
+ ref:B("Référentiel :","Frame of reference:"),
+ refs:{carou:[B("le sol","the ground"),B("le manège","the merry-go-round")],train:[B("le quai","the platform"),B("le train","the train")],para:[B("le sol","the ground"),B("le parachutiste","the skydiver")],moon:[B("géocentrique (Terre)","geocentric (Earth)"),B("héliocentrique (Soleil)","heliocentric (Sun)")]},
+ sceneTxt:{carou:[B("Vu du sol : Inès tourne, papa reste immobile.","Seen from the ground: Inès goes round, Dad stays still."),B("Vu du manège : Inès est immobile, c'est papa qui tourne autour d'elle.","Seen from the merry-go-round: Inès is still, Dad goes round her.")],train:[B("Vu du quai : Léa est immobile, le train et Tom avancent.","Seen from the platform: Léa is still, the train and Tom move."),B("Vu du train : Tom est immobile, c'est le quai et Léa qui défilent.","Seen from the train: Tom is still, the platform and Léa slide past.")],
+  para:[B("Vu du sol : le parachutiste descend vers le sol.","Seen from the ground: the skydiver comes down towards the ground."),B("Vu du parachutiste : il est immobile, c'est le sol qui monte vers lui.","Seen from the skydiver: he is still, the ground rises towards him.")],
+  moon:[B("Centre : la Terre. La Lune décrit un cercle autour d'elle.","Centre: the Earth. The Moon goes round it in a circle."),B("Centre : le Soleil. La Terre tourne autour du Soleil ; la trace de la Lune ondule autour de celle de la Terre.","Centre: the Sun. The Earth goes round the Sun; the Moon's trace wiggles around the Earth's.")]},
+ names:{lea:"Léa",tom:"Tom",earth:B("Terre","Earth"),moon:B("Lune","Moon"),sun:B("Soleil","Sun")}
+};
+const STATIONS=[
+ {id:"s1", col:"--s1", title:B("Décrire un mouvement","Describing motion"), sub:B("Trajectoire et vitesse","Path and speed"),
+  intro:B("Pour décrire un mouvement, deux questions : quel chemin l'objet suit-il, et sa vitesse change-t-elle ? Choisis une trajectoire et un type de vitesse, puis lance la balle. Un point est marqué toutes les 0,2 s, comme sur une chronophotographie.","To describe a motion, ask two questions: what path does the object follow, and does its speed change? Choose a path and a type of speed, then launch the ball. A dot is marked every 0.2 s, as in a stroboscopic photo."),
+  note:{h:B("Décrire un mouvement","Describing a motion"), b:B("Pour décrire le mouvement d'un objet, on donne :<br>sa <mark>trajectoire</mark> : <mark>rectiligne</mark> (droite), <mark>circulaire</mark> (cercle) ou <mark>curviligne</mark> (courbe) ;<br>l'évolution de sa <mark>vitesse</mark> : <mark>uniforme</mark> (constante), <mark>accélérée</mark> (elle augmente) ou <mark>ralentie</mark> / décélérée (elle diminue).","To describe the motion of an object, give:<br>its <mark>path</mark>: <mark>straight</mark> (a line), <mark>circular</mark> (a circle) or <mark>curved</mark>;<br>how its <mark>speed</mark> changes: <mark>constant</mark>, <mark>speeding up</mark> (it increases) or <mark>slowing down</mark> (it decreases).")},
+  qs:[{fig:["line","u"],q:B("Quel est le mouvement de cette balle ?","What is the motion of this ball?"),o:[B("Rectiligne uniforme","Straight, constant speed"),B("Rectiligne accéléré","Straight, speeding up"),B("Circulaire uniforme","Circular, constant speed")],why:B("Ligne droite et écarts égaux.","A straight line and equal gaps.")},
+      {fig:["line","a"],q:B("Et celle-ci ?","And this one?"),o:[B("Rectiligne accéléré","Straight, speeding up"),B("Rectiligne ralenti","Straight, slowing down"),B("Rectiligne uniforme","Straight, constant speed")],why:B("Les écarts grandissent : la balle parcourt de plus en plus de distance pendant la même durée.","The gaps grow: the ball covers more and more distance in the same time.")},
+      {fig:["line","r"],q:B("Et celle-ci ?","And this one?"),o:[B("Rectiligne ralenti","Straight, slowing down"),B("Rectiligne accéléré","Straight, speeding up"),B("Curviligne uniforme","Curved, constant speed")],why:B("Les écarts rétrécissent : la balle ralentit.","The gaps shrink: the ball slows down.")},
+      {fig:["circle","u"],q:B("Une nacelle de grande roue, photographiée toutes les 2 s. Son mouvement est…","A Ferris wheel cabin, photographed every 2 s. Its motion is…"),o:[B("circulaire uniforme","circular, constant speed"),B("rectiligne uniforme","straight, constant speed"),B("circulaire accéléré","circular, speeding up")],why:B("Un cercle, parcouru avec des écarts égaux.","A circle, covered with equal gaps.")}]},
+ {id:"s2", col:"--s2", title:B("Au volant","At the wheel"), sub:B("Accélérer, garder, freiner","Speed up, hold, brake"),
+  intro:B("Prends le volant. Maintiens « Accélérer » ou « Freiner » enfoncé, et regarde le compteur. Toutes les 0,5 s, la voiture laisse une trace sur la route.","Take the wheel. Hold down “Accelerate” or “Brake”, and watch the speedometer. Every 0.5 s the car leaves a mark on the road."),
+  note:{h:B("Vitesse et nature du mouvement","Speed and type of motion"), b:B("Le compteur indique la <mark>vitesse</mark> à chaque instant, en km/h.<br>La vitesse augmente : mouvement <mark>accéléré</mark> (une voiture qui démarre).<br>La vitesse reste la même : mouvement <mark>uniforme</mark> (une voiture à 50 km/h constants).<br>La vitesse diminue : mouvement <mark>ralenti</mark> (une voiture qui freine au feu rouge).<br>Plus la vitesse est grande, plus l'objet parcourt de distance pendant la même durée.","The speedometer shows the <mark>speed</mark> at each instant, in km/h.<br>The speed increases: <mark>speeding up</mark> (a car pulling away).<br>The speed stays the same: <mark>constant speed</mark> (a car at a steady 50 km/h).<br>The speed decreases: <mark>slowing down</mark> (a car braking at a red light).<br>The greater the speed, the more distance the object covers in the same time.")},
+  qs:[{q:B("Une voiture démarre au feu vert, en ligne droite. Son mouvement est…","A car pulls away at a green light, in a straight line. Its motion is…"),o:[B("rectiligne accéléré","straight, speeding up"),B("rectiligne uniforme","straight, constant speed"),B("rectiligne ralenti","straight, slowing down")],why:B("Sa vitesse passe de 0 à plus de 0 : elle augmente.","Its speed goes from 0 upwards: it increases.")},
+      {q:B("Un cycliste roule à 20 km/h, sans changer de vitesse, sur une route droite. Son mouvement est…","A cyclist rides at 20 km/h, without changing speed, on a straight road. The motion is…"),o:[B("rectiligne uniforme","straight, constant speed"),B("rectiligne accéléré","straight, speeding up"),B("circulaire uniforme","circular, constant speed")],why:B("Vitesse constante et ligne droite.","Constant speed and a straight line.")},
+      {q:B("Un skieur freine avant de s'arrêter en bas de la piste. Pendant le freinage, son mouvement est…","A skier brakes before stopping at the bottom of the slope. While braking, the motion is…"),o:[B("ralenti","slowing down"),B("accéléré","speeding up"),B("uniforme","constant speed")],why:B("La vitesse diminue jusqu'à 0.","The speed decreases to 0.")},
+      {q:B("Sur la route, les traces laissées toutes les 0,5 s sont de plus en plus serrées. La voiture…","On the road, the marks left every 0.5 s get closer and closer together. The car…"),o:[B("ralentit","is slowing down"),B("accélère","is speeding up"),B("roule à vitesse constante","is going at constant speed")],why:B("Elle parcourt de moins en moins de distance par demi-seconde.","It covers less and less distance every half second.")}]},
+ {id:"s3", col:"--s3", title:B("Calculer une distance","Calculating a distance"), sub:B("d = v × t","d = v × t"),
+  intro:B("Choisis qui se déplace et pendant combien de temps. La distance parcourue se calcule avec la vitesse et la durée.","Choose who is moving and for how long. The distance covered is calculated from the speed and the time."),
+  note:{h:B("Calculer une distance","Calculating a distance"), b:B("<span class='f'>d = v × t</span> &nbsp; avec d la distance, v la vitesse, t la durée.<br>On en déduit : v = d ÷ t &nbsp; et &nbsp; t = d ÷ v.<br>Les <mark>unités doivent aller ensemble</mark> :<br>v en km/h et t en h → d en km ;<br>v en m/s et t en s → d en m.<br>Attention aux minutes : <mark>30 min = 0,5 h</mark> ; 15 min = 0,25 h.<br>Conversion : 1 m/s = 3,6 km/h.","<span class='f'>d = v × t</span> &nbsp; where d is the distance, v the speed, t the time.<br>From this: v = d ÷ t &nbsp; and &nbsp; t = d ÷ v.<br>The <mark>units must match</mark>:<br>v in km/h and t in h → d in km;<br>v in m/s and t in s → d in m.<br>Careful with minutes: <mark>30 min = 0.5 h</mark>; 15 min = 0.25 h.<br>Conversion: 1 m/s = 3.6 km/h.")},
+  qs:[{num:180,unit:"km",q:B("Une voiture roule à 90 km/h pendant 2 h. Quelle distance parcourt-elle ?","A car drives at 90 km/h for 2 h. What distance does it cover?"),why:B("d = 90 × 2 = 180 km.","d = 90 × 2 = 180 km.")},
+      {num:10,unit:"km",q:B("Un cycliste roule à 20 km/h pendant 30 min. Quelle distance parcourt-il ?","A cyclist rides at 20 km/h for 30 min. What distance does he cover?"),why:B("30 min = 0,5 h, donc d = 20 × 0,5 = 10 km. Ceux qui ont trouvé 600 ont oublié de convertir.","30 min = 0.5 h, so d = 20 × 0.5 = 10 km. If you got 600, you forgot to convert.")},
+      {num:450,unit:"km",q:B("Un TGV roule à 300 km/h pendant 1 h 30 min. Quelle distance parcourt-il ?","A high-speed train travels at 300 km/h for 1 h 30 min. What distance does it cover?"),why:B("1 h 30 min = 1,5 h, donc d = 300 × 1,5 = 450 km.","1 h 30 min = 1.5 h, so d = 300 × 1.5 = 450 km.")},
+      {num:1020,unit:"m",q:B("Le son va à 340 m/s. Le tonnerre met 3 s à t'arriver. À quelle distance est tombée la foudre ?","Sound travels at 340 m/s. The thunder takes 3 s to reach you. How far away did the lightning strike?"),why:B("d = 340 × 3 = 1 020 m : environ 1 km.","d = 340 × 3 = 1,020 m: about 1 km.")},
+      {q:B("36 km/h, cela fait combien en m/s ?","How much is 36 km/h in m/s?"),o:["10 m/s","130 m/s","3,6 m/s"],why:B("On divise par 3,6 : 36 ÷ 3,6 = 10 m/s.","Divide by 3.6: 36 ÷ 3.6 = 10 m/s.")}]},
+ {id:"s4", col:"--s4", title:B("Tout est relatif","It's all relative"), sub:B("Le référentiel","The frame of reference"),
+  intro:B("Est-ce que tu bouges en ce moment ? Par rapport à ta chaise, non. Par rapport au Soleil, tu files à environ 30 km par seconde. Choisis une scène, puis change de référentiel : l'objet de référence par rapport auquel on observe.","Are you moving right now? Relative to your chair, no. Relative to the Sun, you are speeding along at about 30 km per second. Choose a scene, then change the frame of reference: the object you observe the motion from."),
+  note:{h:B("La relativité du mouvement","Relative motion"), b:B("Un mouvement se décrit toujours <mark>par rapport à un objet de référence</mark> : le <mark>référentiel</mark>.<br>Un même objet peut être <mark>immobile dans un référentiel</mark> et <mark>en mouvement dans un autre</mark>.<br>Ex. : un passager assis est immobile par rapport au train, mais en mouvement par rapport au quai.<br>Référentiel <mark>terrestre</mark> : le sol.<br>Référentiel <mark>géocentrique</mark> : le centre de la Terre. La Lune y a une trajectoire (presque) circulaire.<br>Référentiel <mark>héliocentrique</mark> : le centre du Soleil. La Terre y tourne autour du Soleil en un an.","A motion is always described <mark>relative to a reference object</mark>: the <mark>frame of reference</mark>.<br>The same object can be <mark>still in one frame</mark> and <mark>moving in another</mark>.<br>E.g. a seated passenger is still relative to the train, but moving relative to the platform.<br><mark>Earth-based</mark> frame: the ground.<br><mark>Geocentric</mark> frame: the centre of the Earth. The Moon's path in it is (almost) circular.<br><mark>Heliocentric</mark> frame: the centre of the Sun. The Earth goes round the Sun in it in one year.")},
+  qs:[{q:B("Tom est assis dans le train qui roule. Par rapport au train, Tom est…","Tom is sitting in the moving train. Relative to the train, Tom is…"),o:[B("immobile","still"),B("en mouvement","moving")],why:B("Sa distance aux sièges et aux fenêtres ne change pas.","His distance to the seats and windows does not change.")},
+      {q:B("Et par rapport au quai, Tom est…","And relative to the platform, Tom is…"),o:[B("en mouvement","moving"),B("immobile","still")],why:B("Il s'éloigne de Léa, restée sur le quai.","He moves away from Léa, who stays on the platform.")},
+      {q:B("Pour le parachutiste qui se prend comme référence, que fait le sol ?","For the skydiver taking himself as reference, what does the ground do?"),o:[B("Il monte vers lui","It rises towards him"),B("Il reste immobile","It stays still"),B("Il s'éloigne","It moves away")],why:B("Dans son propre référentiel, c'est le reste du monde qui bouge.","In his own frame, it is the rest of the world that moves.")},
+      {q:B("Dans le référentiel géocentrique, la trajectoire de la Lune est…","In the geocentric frame, the Moon's path is…"),o:[B("presque circulaire","almost circular"),B("rectiligne","a straight line"),B("une spirale","a spiral")],why:B("Elle fait le tour de la Terre en environ 27 jours.","It goes round the Earth in about 27 days.")},
+      {q:B("Dans quel référentiel dit-on que la Terre tourne autour du Soleil ?","In which frame do we say the Earth goes round the Sun?"),o:[B("Héliocentrique","Heliocentric"),B("Géocentrique","Geocentric"),B("Terrestre","Earth-based")],why:B("Hélios veut dire « Soleil » en grec.","Helios means “Sun” in Greek.")}]}
+];
+
+/* ================================ state ================================ */
+let CUR="s1", ANS={}, RAF=0, keyH=null;
+try{ localStorage.removeItem("mvt-ans"); }catch(e){}
+const save=()=>{};
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const RM=typeof matchMedia==="function"&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+let TICKS=[]; function loop(fn){ TICKS.push(fn); if(TICKS.length>1) return; let last=performance.now(); const t0=last; const st=t=>{ const dt=Math.min(.05,(t-last)/1000); last=t; TICKS.forEach(f=>f((t-t0)/1000,dt)); RAF=requestAnimationFrame(st); }; RAF=requestAnimationFrame(st); }
+const total=()=>STATIONS.reduce((s,x)=>s+x.qs.length,0), good=()=>Object.values(ANS).filter(v=>v===true).length;
+
+/* ============================ drawing helpers ============================ */
+const sAt={u:p=>p, a:p=>p*p, r:p=>1-(1-p)*(1-p), t:p=>p};
+function pathPt(tr,s,W,H){ if(tr==="line") return [30+s*(W-60), H/2];
+  if(tr==="drop") return [W/2, 20+s*(H-40)];
+  if(tr==="throw") return [30+s*(W-60), H-22-(H-50)*4*s*(1-s)];
+  if(tr==="circle"){ const a=-Math.PI/2+s*2*Math.PI*.9, r=Math.min(W,H)*.36; return [W/2+r*Math.cos(a), H/2+r*Math.sin(a)]; }
+  const x=30+s*(W-60); return [x, H/2+Math.sin(s*Math.PI*1.6)*H*.28]; }
+function trackD(tr,W,H){ let d=""; for(let i=0;i<=100;i++){ const p=pathPt(tr,i/100,W,H); d+=(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1); } return d; }
+function chronoSVG(tr,k,n){ const W=440,H=tr==="line"?90:170; n=n||9; let g=`<rect width="${W}" height="${H}" rx="10" fill="var(--bg)"/><path d="${trackD(tr,W,H)}" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="4 5"/>`;
+  for(let i=0;i<n;i++){ const p=pathPt(tr,sAt[k](i/(n-1)),W,H); g+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="7" fill="var(--zc)" stroke="var(--card)" stroke-width="2"/><text x="${p[0].toFixed(1)}" y="${(p[1]-12).toFixed(1)}" text-anchor="middle" style="font:700 11px var(--body);fill:var(--muted)">${i+1}</text>`; }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="chronophotographie">${g}</svg>`; }
+const LEFTY=["🚗","🛷","🚶","🚴","🐆","🚄","🏃","🐇","🐢","🛴","🐕","🦆"];
+const EMO=(c,x,y,sz)=>`<text transform="translate(${(+x).toFixed(1)} ${(+y).toFixed(1)})${LEFTY.includes(c)?" scale(-1 1)":""}" text-anchor="middle" style="font-size:${sz}px">${c}</text>`;
+const MAN=(x,y,c,s)=>`<g transform="translate(${x} ${y}) scale(${s||1})"><circle cx="0" cy="-34" r="7" fill="${c}"/><path d="M0-27V-8M0-8l-7 14M0-8l7 14M-9-20l9 4l9-4" stroke="${c}" stroke-width="4" fill="none" stroke-linecap="round"/></g>`;
+
+/* =============================== widgets =============================== */
+const SIM={
+ s1:{ html:()=>`<h3>${T(B("La chronophotographie","The stroboscopic photo"))}</h3><svg id="cv" viewBox="0 0 440 200" role="img" aria-label="simulation"></svg>
+   <div class="ctl" style="margin-top:0;margin-bottom:10px"><span class="lab">${T(UI.ex)}</span>${UI.presets.map((p,i)=>`<button class="btn pr" data-i="${i}">${p[0]} ${T(p[1])}</button>`).join("")}</div>
+   <div class="ctl"><span class="lab">${T(UI.traj)}</span>${["line","circle","curve"].map(k=>`<button class="btn tr${k==="line"?" on":""}" data-k="${k}">${T(UI.trajs[k])}</button>`).join("")}</div>
+   <div class="ctl"><span class="lab">${T(UI.speed)}</span>${["u","a","r"].map(k=>`<button class="btn kd${k==="u"?" on":""}" data-k="${k}">${T(UI.kinds[k])}</button>`).join("")}</div>
+   <div class="ctl"><button class="btn big" id="cgo">${T(UI.play)}</button><span class="tag" id="cname"></span></div>`,
+  mount(){ let tr="line",k="u",t0=null,ico=null; const sv=$("#cv"), W=440,H=200, D=3.2, step=.2;
+   const name=()=>$("#cname").textContent=k==="t"?T(UI.throwName):UI.mvtName(tr==="drop"?"line":tr==="throw"?"curve":tr,k);
+   const draw=t=>{ const e=t0==null?0:Math.min(t-t0,D); let g=`<rect width="${W}" height="${H}" rx="12" fill="var(--bg)"/><path d="${trackD(tr,W,H)}" fill="none" stroke="var(--line)" stroke-width="3" stroke-dasharray="5 6"/>`;
+     if(t0!=null){ for(let s=0;s<=e+1e-6;s+=step){ const p=pathPt(tr,sAt[k](s/D),W,H); g+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="6" fill="none" stroke="var(--zc)" stroke-width="2.5"/>`; }
+       const p=pathPt(tr,sAt[k](e/D),W,H); g+=ico?EMO(ico,p[0],p[1]+10,28):`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="11" fill="var(--zc)"/>`;
+       g+=`<text x="${W-12}" y="22" text-anchor="end" style="font:700 15px var(--body);fill:var(--ink)">t = ${fmt(e.toFixed(1))} s</text>`; }
+     else { const p=pathPt(tr,0,W,H); g+=ico?EMO(ico,p[0],p[1]+10,28):`<circle cx="${p[0]}" cy="${p[1]}" r="11" fill="var(--zc)"/>`; }
+     sv.innerHTML=g; };
+   const set=(cls,v)=>{ $$(cls).forEach(b=>b.classList.toggle("on",b.dataset.k===v)); t0=null; ico=null; $$(".pr").forEach(x=>x.classList.remove("on")); name(); };
+   $$(".tr").forEach(b=>b.onclick=()=>{ tr=b.dataset.k; if(k==="t") k="u", set(".kd",k); set(".tr",tr); });
+   $$(".kd").forEach(b=>b.onclick=()=>{ k=b.dataset.k; if(tr==="drop"||tr==="throw") tr="line", set(".tr",tr); set(".kd",k); });
+   $$(".pr").forEach(b=>b.onclick=()=>{ const pr=UI.presets[+b.dataset.i]; tr=pr[2]; k=pr[3]; $$(".tr").forEach(x=>x.classList.toggle("on",x.dataset.k===tr)); $$(".kd").forEach(x=>x.classList.toggle("on",x.dataset.k===k)); $$(".pr").forEach(x=>x.classList.toggle("on",x===b)); ico=pr[0]; name(); t0=now; });
+   let now=0; loop(t=>{ now=t; draw(t); }); $("#cgo").onclick=()=>{ t0=now; }; name(); } },
+ s2:{ html:()=>`<h3>${T(B("La route","The road"))}</h3><svg id="dv" viewBox="0 0 440 210" role="img" aria-label="road"></svg>
+   <div class="read"><span>v = <b id="dvv">0 km/h</b></span><span class="tag" id="dst"></span></div>
+   <div class="ctl"><button class="btn big brk" id="brk">◀ ${T(UI.brake)}</button><button class="btn big gas" id="gas">${T(UI.gas)} ▶</button></div>
+   <p class="sub" style="margin:8px 0 0">${T(UI.keys)}</p>
+   <h3 style="margin-top:14px">${T(B("Toutes les traces du trajet","Every mark of the trip"))}</h3><svg id="ds" viewBox="0 0 440 104" role="img" aria-label="trip"></svg>
+   <div class="ctl"><button class="btn" id="drst">${T(B("↻ Recommencer le trajet","↻ Restart the trip"))}</button></div><ol class="mis" id="mis"></ol><p id="bravo" style="font-weight:700;margin:8px 0 0"></p></section>
+   <section class="sim"><h3>${T(UI.guess)}</h3><svg id="gv" viewBox="0 0 440 200" role="img" aria-label="race"></svg><div class="lanes" id="gl"></div><div class="ctl"><button class="btn big" id="grev">${T(UI.reveal)}</button><button class="btn" id="gnew">${T(UI.newRace)}</button><span id="gres" style="font-weight:700"></span></div>`,
+  mount(){ const sv=$("#dv"), ds=$("#ds"); let v=0, x=0, gas=false, brk=false, marks=[], nextMark=0, hist=[], m=0, hold=0, el=0;
+   const COL={a:"var(--s3)",u:"var(--s4)",r:"var(--bad)"};
+   $("#drst").onclick=()=>{ v=0; x=0; marks=[]; nextMark=0; hist=[]; m=0; hold=0; el=0; };
+   const misDraw=()=>{ $("#mis").innerHTML=UI.missions.map((s,i)=>`<li class="${i<m?"done":i===m?"cur":""}">${i<m?"✓ ":""}${T(s)}${i===1&&m===1?` (${fmt(hold.toFixed(1))} s)`:""}</li>`).join(""); $("#bravo").textContent=m>=3?T(UI.bravo):""; };
+   const press=(el2,setv)=>{ const on=()=>{ setv(true); el2.classList.add("on"); }, off=()=>{ setv(false); el2.classList.remove("on"); };
+     el2.onpointerdown=e=>{ e.preventDefault(); on(); try{el2.setPointerCapture(e.pointerId)}catch(_){} }; el2.onpointerup=el2.onpointercancel=el2.onlostpointercapture=off; };
+   press($("#gas"),b=>gas=b); press($("#brk"),b=>brk=b);
+   keyH=e=>{ const d=e.type==="keydown"; if(e.key==="ArrowRight"||e.key==="ArrowUp"){ gas=d; $("#gas").classList.toggle("on",d); e.preventDefault(); } if(e.key==="ArrowLeft"||e.key==="ArrowDown"){ brk=d; $("#brk").classList.toggle("on",d); e.preventDefault(); } };
+   addEventListener("keydown",keyH); addEventListener("keyup",keyH);
+   misDraw();
+   loop((t,dt)=>{ el+=dt; if(gas) v+=16*dt; if(brk) v-=32*dt; if(!gas&&!brk) v-=1.2*dt; v=Math.max(0,Math.min(130,v)); x+=v/3.6*dt;
+     hist.push([el,v]); while(hist.length&&el-hist[0][0]>.4) hist.shift(); const dv=v-hist[0][1];
+     const st=v<.3?"s":dv>.6?"a":dv<-.6?"r":"u";
+     if(el>=nextMark){ nextMark=el+.5; if(v>.3) marks.push([x,st]); if(marks.length>800) marks.shift(); }
+     if(m===0&&v>=50) m=1; else if(m===1){ if(v>=45&&v<=55){ hold+=dt; if(hold>=3) m=2; } else hold=0; } else if(m===2&&v<.3) m=3;
+     const sc=2.4, carX=110, X=xm=>carX+(xm-x)*sc;
+     let g=`<rect width="440" height="210" fill="var(--sky)"/><rect y="150" width="440" height="60" fill="var(--ground)"/><rect y="96" width="440" height="58" fill="var(--road)"/>`;
+     const off=((x*sc)%60+60)%60; for(let i=-1;i<9;i++) g+=`<rect x="${(i*60-off).toFixed(1)}" y="123" width="30" height="4" fill="#fff" opacity=".8"/>`;
+     for(let i=-1;i<6;i++){ const tx=((i*110-(x*sc*.5)%110)+110*6)%(110*6)-40; g+=`<circle cx="${tx.toFixed(1)}" cy="74" r="18" fill="#3e8e41"/><rect x="${(tx-3).toFixed(1)}" y="80" width="6" height="16" fill="#7a5230"/>`; }
+     marks.forEach(mk=>{ const sx=X(mk[0]); if(sx>-10&&sx<450) g+=`<rect x="${(sx-3).toFixed(1)}" y="100" width="6" height="50" rx="3" fill="#ffd23f" stroke="#1c1c1c" stroke-width="1"/>`; });
+     g+=`<g transform="translate(${carX} 112)"><rect x="-34" y="-6" width="68" height="20" rx="6" fill="var(--zc)"/><path d="M-20 -6l8 -14h22l10 14z" fill="var(--zc)"/><path d="M-14 -7l5 -10h8v10zM3 -7v-10h6l6 10z" fill="#cfe6ff"/><circle cx="-18" cy="15" r="7" fill="#1c1c1c"/><circle cx="18" cy="15" r="7" fill="#1c1c1c"/></g>`;
+     const ang=-Math.PI+Math.PI*v/130, nx=380+38*Math.cos(ang), ny=60+38*Math.sin(ang);
+     g+=`<path d="M338 60A42 42 0 0 1 422 60" fill="var(--card)" stroke="var(--ink)" stroke-width="3"/><path d="M380 60L${nx.toFixed(1)} ${ny.toFixed(1)}" stroke="var(--bad)" stroke-width="3.5" stroke-linecap="round"/><circle cx="380" cy="60" r="4" fill="var(--ink)"/><text x="380" y="78" text-anchor="middle" style="font:700 12px var(--body);fill:var(--ink)">km/h</text>`;
+     sv.innerHTML=g;
+     { const x0=marks.length?marks[0][0]:0, span=Math.max(60,x-x0); let h=`<rect width="440" height="104" rx="10" fill="var(--bg)"/><path d="M16 42H424" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>`;
+       marks.forEach(mk=>{ const px=16+408*(mk[0]-x0)/span; h+=`<rect x="${(px-1.5).toFixed(1)}" y="28" width="3" height="28" rx="1.5" fill="${COL[mk[1]]||"var(--muted)"}"/>`; });
+       h+=`<text x="16" y="80" style="font:700 12px var(--body);fill:var(--muted)">${T(B("départ","start"))}</text><text x="424" y="80" text-anchor="end" style="font:700 12px var(--body);fill:var(--muted)">${fmt(Math.round(x))} m</text>`;
+       const lg=[["a",B("accéléré","speeding up")],["u",B("constant","constant")],["r",B("ralenti","slowing down")]]; lg.forEach((l,i)=>h+=`<rect x="${120+i*100}" y="88" width="10" height="10" rx="2" fill="${COL[l[0]]}"/><text x="${134+i*100}" y="97" style="font:700 12px var(--body);fill:var(--ink)">${T(l[1])}</text>`);
+       ds.innerHTML=h; }
+     $("#dvv").textContent=Math.round(v)+" km/h"; const tg=$("#dst"); tg.textContent=T(UI.status[st]); tg.style.background=st==="a"?"var(--s3)":st==="r"?"var(--bad)":st==="u"?"var(--s4)":"var(--muted)";
+     if(Math.floor(el*10)%3===0) misDraw(); });
+   /* guessing race */
+   let R=null, gnow=0; const gv=$("#gv");
+   const newRace=()=>{ const ks=["u","a","r"].sort(()=>Math.random()-.5), ic=[...UI.runners].sort(()=>Math.random()-.5).slice(0,3); R={ks,ic,pick:[null,null,null],t0:gnow,shown:false};
+     $("#gl").innerHTML=R.ic.map((c,i)=>`<div class="ctl" style="margin-top:6px"><span style="font-size:22px">${c}</span>${["u","a","r"].map(k=>`<button class="btn gp" data-l="${i}" data-k="${k}">${T(UI.shortK[k])}</button>`).join("")}</div>`).join("");
+     $("#gres").textContent=""; $$(".gp").forEach(b=>b.onclick=()=>{ if(R.shown) return; R.pick[+b.dataset.l]=b.dataset.k; $$(`.gp[data-l="${b.dataset.l}"]`).forEach(x=>x.classList.toggle("on",x===b)); }); };
+   loop(t=>{ gnow=t; if(!R) return; const e=Math.min((t-R.t0)%7,4); let g=`<rect width="440" height="200" rx="12" fill="var(--bg)"/>`;
+     R.ks.forEach((k,i)=>{ const y=40+i*60; g+=`<path d="M30 ${y+14}H420" stroke="var(--line)" stroke-width="2"/><path d="M420 ${y-14}V${y+16}" stroke="currentColor" stroke-width="2"/>`;
+       for(let s=0;s<=e+1e-6;s+=.4){ const x=30+390*sAt[k](s/4); g+=`<circle cx="${x.toFixed(1)}" cy="${y+14}" r="4" fill="var(--zc)"/>`; }
+       g+=EMO(R.ic[i],30+390*sAt[k](e/4),y+8,26);
+       if(R.shown) g+=`<text x="34" y="${y-14}" style="font:700 13px var(--body);fill:${R.pick[i]===k?"var(--ok)":"var(--bad)"}">${R.pick[i]===k?"✓":"✗"} ${T(UI.shortK[k])}</text>`; });
+     gv.innerHTML=g; });
+   $("#grev").onclick=()=>{ R.shown=true; const n=R.ks.filter((k,i)=>R.pick[i]===k).length; $("#gres").textContent=`${n} / 3`; };
+   $("#gnew").onclick=newRace; newRace(); } },
+ s3:{ html:()=>`<h3>${T(B("Jusqu'où ?","How far?"))}</h3><div class="ctl" style="margin-top:0">${UI.movers.map((m,i)=>`<button class="btn mv${i===2?" on":""}" data-i="${i}">${m[2]} ${T(m[0])}</button>`).join("")}</div>
+   <svg id="tv" viewBox="0 0 440 110" role="img" aria-label="track" style="margin-top:10px"></svg>
+   <div class="ctl"><label class="sl" for="ts">${T(UI.dur)} : <span id="tsv"></span><input type="range" id="ts" min="0" max="12" value="6"></label><button class="btn big" id="tgo">${T(UI.play)}</button></div>
+   <div class="formula" id="tf"></div></section>
+   <section class="sim"><h3>${T(UI.trip)}</h3><div class="ctl" style="margin-top:0">${UI.trips.map((p,i)=>`<button class="btn tp${i?"":" on"}" data-i="${i}">${p[0]} ${T(p[1])}</button>`).join("")}</div><svg id="trv" viewBox="0 0 440 230" role="img" aria-label="times" style="margin-top:10px"></svg>
+   <h3 style="margin-top:14px">${T(UI.conv)}</h3><label class="sl" for="cvs">v : <span id="cvsv"></span><input type="range" id="cvs" min="0" max="150" value="36"></label><div class="formula" id="cvf"></div>`,
+  mount(){ let mi=2, steps=6, anim=null, now=0; const sv=$("#tv");
+   const tH=()=>steps*.25, mv=()=>UI.movers[mi], v=()=>mv()[1];
+   const tTxt=h=>{ const H=Math.floor(h), M=Math.round((h-H)*60); return (H?H+" h ":"")+(M||!H?M+" min":"").trim(); };
+   const draw=()=>{ const max=v()*3, frac=anim==null?1:Math.min(1,(now-anim)/2.5), tt=tH()*frac, d=v()*tt;
+     let g=`<rect width="440" height="110" rx="12" fill="var(--bg)"/><path d="M20 70H420" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/>`;
+     for(let i=0;i<=6;i++){ const x=20+i*400/6, val=max*i/6; g+=`<path d="M${x} 62V78" stroke="var(--muted)" stroke-width="2"/><text x="${x}" y="96" text-anchor="middle" style="font:700 11px var(--body);fill:var(--muted)">${fmt(r2(val))} km</text>`; }
+     const px=20+400*(d/max); g+=`<path d="M20 70H${px.toFixed(1)}" stroke="var(--zc)" stroke-width="6" stroke-linecap="round"/>${EMO(mv()[2],px,50,30)}`;
+     g+=`<text x="430" y="22" text-anchor="end" style="font:700 14px var(--body);fill:var(--ink)">t = ${tTxt(tt)}</text>`;
+     sv.innerHTML=g; $("#tsv").textContent=tTxt(tH())+` (${fmt(tH())} h)`;
+     $("#tf").innerHTML=`d = v × t = ${fmt(v())} km/h × ${fmt(tH())} h = <span style="color:var(--zc)">${fmt(r2(v()*tH()))} km</span>`; };
+   $$(".mv").forEach(b=>b.onclick=()=>{ mi=+b.dataset.i; $$(".mv").forEach(x=>x.classList.toggle("on",x===b)); anim=null; draw(); });
+   $("#ts").oninput=e=>{ steps=+e.target.value; anim=null; draw(); };
+   $("#tgo").onclick=()=>{ anim=now; };
+   loop(t=>{ now=t; draw(); });
+   let ti=0; const tTxt2=h=>{ const H=Math.floor(h), M=Math.round((h-H)*60); return h<1/60?"< 1 min":(H?H+" h ":"")+(M?M+" min":""); };
+   const trips=()=>{ const d=UI.trips[ti][2], mx=Math.log10(1+d/5*60); let g=`<rect width="440" height="230" rx="12" fill="var(--bg)"/>`;
+     UI.movers.forEach((m,i)=>{ const h=d/m[1], y=18+i*35, w=Math.max(4,300*Math.log10(1+h*60)/mx); g+=`<text x="8" y="${y+18}" style="font-size:20px">${m[2]}</text><rect x="40" y="${y+4}" width="${w.toFixed(1)}" height="20" rx="6" fill="var(--zc)" opacity=".85"/><text x="${(46+w).toFixed(1)}" y="${y+19}" style="font:700 13px var(--body);fill:var(--ink)">${tTxt2(h)}</text>`; });
+     $("#trv").innerHTML=g; };
+   $$(".tp").forEach(b=>b.onclick=()=>{ ti=+b.dataset.i; $$(".tp").forEach(x=>x.classList.toggle("on",x===b)); trips(); }); trips();
+   const cv=()=>{ const k=+$("#cvs").value; $("#cvsv").textContent=k+" km/h"; $("#cvf").innerHTML=`${k} km/h ÷ 3,6 = <span style="color:var(--zc)">${fmt(r2(k/3.6))} m/s</span>`.replace("3,6",LANG==="fr"?"3,6":"3.6"); };
+   $("#cvs").oninput=cv; cv(); } },
+ s4:{ html:()=>`<div class="ctl" style="margin-top:0">${["train","para","moon","carou"].map((k,i)=>`<button class="btn sc${i?"":" on"}" data-k="${k}">${T(UI.frames[k])}</button>`).join("")}</div>
+   <svg id="rv" viewBox="0 0 440 220" role="img" aria-label="scene" style="margin-top:10px"></svg>
+   <div class="ctl"><span class="lab">${T(UI.ref)}</span><span id="rbtn"></span></div><p id="rtxt" style="margin:8px 0 0;font-weight:700"></p>`,
+  mount(){ let sc="train", rf=0, trail=[]; const sv=$("#rv");
+   const btns=()=>{ $("#rbtn").innerHTML=UI.refs[sc].map((r,i)=>`<button class="btn rf${i===rf?" on":""}" data-i="${i}">${T(r)}</button>`).join(" "); $$(".rf").forEach(b=>b.onclick=()=>{ rf=+b.dataset.i; trail=[]; btns(); }); $("#rtxt").textContent=T(UI.sceneTxt[sc][rf]); };
+   $$(".sc").forEach(b=>b.onclick=()=>{ sc=b.dataset.k; rf=0; trail=[]; $$(".sc").forEach(x=>x.classList.toggle("on",x===b)); btns(); });
+   btns();
+   const train=t=>{ const trx=rf?60:((t*90)%760)-320, shift=rf?-((t*90)%880):0; let g=`<rect width="440" height="220" fill="var(--sky)"/><rect y="170" width="440" height="50" fill="var(--ground)"/>`;
+     for(let k=-1;k<=1;k++){ const b=shift+k*880; if(b>440||b+880<0) continue;
+       for(let j=0;j<8;j++){ const lx=b+j*110+40; if(lx>-20&&lx<460) g+=`<rect x="${lx.toFixed(1)}" y="70" width="6" height="100" fill="#8a94a6"/><circle cx="${(lx+3).toFixed(1)}" cy="68" r="7" fill="#ffd66b"/>`; }
+       g+=`<rect x="${b.toFixed(1)}" y="160" width="880" height="14" fill="#b9a68a"/>${MAN(b+150,160,"var(--s2)")}<text x="${(b+150).toFixed(1)}" y="104" text-anchor="middle" style="font:700 13px var(--body);fill:var(--ink)">${UI.names.lea}</text>`; }
+     g+=`<rect x="${trx.toFixed(1)}" y="96" width="300" height="56" rx="12" fill="var(--zc)"/>`;
+     for(let w=0;w<5;w++) g+=`<rect x="${(trx+20+w*56).toFixed(1)}" y="106" width="40" height="24" rx="4" fill="#d8ecff"/>`;
+     g+=`<circle cx="${(trx+96).toFixed(1)}" cy="116" r="7" fill="var(--ink)"/><rect x="${(trx+90).toFixed(1)}" y="122" width="12" height="8" fill="var(--ink)"/><text x="${(trx+96).toFixed(1)}" y="90" text-anchor="middle" style="font:700 13px var(--body);fill:var(--ink)">${UI.names.tom}</text>`;
+     g+=`<circle cx="${(trx+50).toFixed(1)}" cy="156" r="8" fill="#333"/><circle cx="${(trx+250).toFixed(1)}" cy="156" r="8" fill="#333"/>`;
+     return g; };
+   const para=t=>{ const p=(t%6)/6, H=220; let g=`<rect width="440" height="220" fill="var(--sky)"/>`;
+     const gy=rf?260-p*95:178, py=rf?92:20+p*140, plx=rf?(120+t*60)%560-60:(t*60)%560-60, ply=rf?40-p*95:30;
+     g+=`<g transform="translate(${plx.toFixed(1)} ${ply.toFixed(1)})"><path d="M-30 0h50l10 -6v12l-10 -6" fill="#8a94a6"/><path d="M-6 0l-12 -12h8l12 12zM-6 0l-12 12h8l12 -12z" fill="#6b7586"/></g>`;
+     g+=`<rect y="${gy.toFixed(1)}" width="440" height="${Math.max(0,H-gy+40).toFixed(1)}" fill="var(--ground)"/>`;
+     [60,170,300,390].forEach(x=>g+=`<circle cx="${x}" cy="${(gy-14).toFixed(1)}" r="16" fill="#3e8e41"/><rect x="${x-3}" y="${(gy-8).toFixed(1)}" width="6" height="10" fill="#7a5230"/>`);
+     g+=`<g transform="translate(220 ${py.toFixed(1)})"><path d="M-34 0A34 22 0 0 1 34 0Z" fill="var(--zc)"/><path d="M-30 0L-4 34M30 0L4 34M0 0V34" stroke="var(--ink)" stroke-width="1.5"/>${MAN(0,58,"var(--ink)",.75)}</g>`;
+     return g; };
+   const moon=(t,dt)=>{ let g=`<rect width="440" height="220" rx="12" fill="#0e1424"/>`; for(let i=0;i<40;i++) g+=`<circle cx="${(i*97)%440}" cy="${(i*53)%220}" r="1" fill="#fff" opacity=".6"/>`;
+     const cx=220, cy=110;
+     if(!rf){ const a=t*1.4, mx=cx+75*Math.cos(a), my=cy+75*Math.sin(a)*.8; g+=`<ellipse cx="${cx}" cy="${cy}" rx="75" ry="60" fill="none" stroke="#9aa6c0" stroke-dasharray="4 5"/><circle cx="${cx}" cy="${cy}" r="18" fill="#3f88e0"/><text x="${cx}" y="${cy+36}" text-anchor="middle" style="font:700 12px var(--body);fill:#e7ecf6">${T(UI.names.earth)}</text><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="7" fill="#d9d9d9"/><text x="${mx.toFixed(1)}" y="${(my-12).toFixed(1)}" text-anchor="middle" style="font:700 12px var(--body);fill:#e7ecf6">${T(UI.names.moon)}</text>`; }
+     else { const A=t*.22, ex=cx+150*Math.cos(A), ey=cy+80*Math.sin(A), a=t*.22*7, mx=ex+10*Math.cos(a), my=ey+10*Math.sin(a); trail.push([mx,my]); if(trail.length>900) trail.shift();
+       g+=`<ellipse cx="${cx}" cy="${cy}" rx="150" ry="80" fill="none" stroke="#3f88e0" stroke-dasharray="4 5" opacity=".7"/><circle cx="${cx}" cy="${cy}" r="22" fill="#ffc83d"/><text x="${cx}" y="${cy+40}" text-anchor="middle" style="font:700 12px var(--body);fill:#e7ecf6">${T(UI.names.sun)}</text>`;
+       if(trail.length>1) g+=`<path d="M${trail.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join("L")}" fill="none" stroke="#d9d9d9" stroke-width="1.6" opacity=".85"/>`;
+       g+=`<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="8" fill="#3f88e0"/><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="4" fill="#fff"/>`; }
+     return g; };
+   const carou=t=>{ const cx=220,cy=120,R=110, w=t*.9; let g=`<rect width="440" height="220" fill="var(--sky)"/><rect y="150" width="440" height="70" fill="var(--ground)"/>`;
+     const a0=rf?0:w, dad=rf?-w:0, P=a=>[cx+R*Math.cos(a), cy+R*.3*Math.sin(a)];
+     g+=`<ellipse cx="${cx}" cy="${cy+10}" rx="${R+14}" ry="${(R+14)*.3}" fill="#c06a3a"/><ellipse cx="${cx}" cy="${cy}" rx="${R+14}" ry="${(R+14)*.3}" fill="#f3b562"/><rect x="${cx-5}" y="20" width="10" height="${cy-20}" fill="#8a5a3a"/><path d="M${cx-130} 40L${cx} 6L${cx+130} 40Z" fill="var(--bad)"/>`;
+     for(let i=0;i<6;i++){ const a=a0+i*Math.PI/3, p=P(a); g+=`<path d="M${p[0].toFixed(1)} 40V${p[1].toFixed(1)}" stroke="#d9d9d9" stroke-width="2"/>`+(i?`<circle cx="${p[0].toFixed(1)}" cy="${(p[1]-8).toFixed(1)}" r="8" fill="#fff" stroke="#9aa"/>`:""); }
+     const ip=P(a0); g+=MAN(ip[0],ip[1],"var(--s1)",.8)+`<text x="${ip[0].toFixed(1)}" y="${(ip[1]-36).toFixed(1)}" text-anchor="middle" style="font:700 13px var(--body);fill:var(--ink)">Inès</text>`;
+     const dp=[cx+(R+60)*Math.cos(dad+Math.PI*.15), cy+30+(R+60)*.28*Math.sin(dad+Math.PI*.15)]; g+=MAN(dp[0],dp[1]+40,"var(--s2)",1)+`<text x="${dp[0].toFixed(1)}" y="${(dp[1]-4).toFixed(1)}" text-anchor="middle" style="font:700 13px var(--body);fill:var(--ink)">${LANG==="fr"?"Papa":"Dad"}</text>`;
+     return g; };
+   loop((t,dt)=>{ sv.innerHTML=sc==="train"?train(t):sc==="para"?para(t):sc==="moon"?moon(t,dt):carou(t); }); } }
+};
+
+/* ================================ render ================================ */
+function noteHTML(st){ return `<div class="note" style="--zc:var(${st.col})"><h4>${T(st.note.h)}</h4><p>${T(st.note.b)}</p></div>`; }
+function seeded(id,n){ let s=7; for(const c of id) s=(s*31+c.charCodeAt(0))%9973; const a=[...Array(n).keys()]; for(let i=n-1;i>0;i--){ s=(s*7919+17)%9973; const j=s%(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function whyHTML(q,ok){ const right=q.num!=null?fmt(q.num)+" "+q.unit:T(q.o[0]);
+  return `<p class="why"><b class="${ok?"":"no"}">${ok?T(UI.yes):T(B("Non, la bonne réponse est : ","No, the right answer is: "))+right+"."}</b> ${ok&&q.num!=null?T(UI.ans)+" : "+right+". ":""}${T(q.why)}</p>`; }
+function qHTML(st,k){ const q=st.qs[k], id=st.id+"_"+k, done=ANS[id]!=null, fig=q.fig?chronoSVG(q.fig[0],q.fig[1]):"";
+  const why=done?whyHTML(q,ANS[id]):"";
+  if(q.num!=null) return `<div class="q" data-q="${id}"><p>${T(q.q)}</p><div class="num"><input inputmode="decimal" aria-label="${T(UI.ans)}" ${done?"disabled":""}><span>${q.unit}</span><button class="btn chk" ${done?"disabled":""}>${T(UI.check)}</button></div>${why}</div>`;
+  const ord=seeded(id,q.o.length);
+  return `<div class="q" data-q="${id}"><p>${T(q.q)}</p>${fig}<div class="opts">${ord.map(i=>`<button class="opt${done&&i===0?" good":""}" data-i="${i}" ${done?"disabled":""}>${T(q.o[i])}</button>`).join("")}</div>${why}</div>`; }
+function render(){
+  cancelAnimationFrame(RAF); TICKS=[]; if(keyH){ removeEventListener("keydown",keyH); removeEventListener("keyup",keyH); keyH=null; }
+  document.documentElement.lang=LANG; $("#h1").textContent=T(UI.h1);
+  $("#score").textContent=`✓ ${good()} / ${total()} ${T(UI.score)}`;
+  $("#nav").innerHTML=STATIONS.map((s,i)=>{ const ok=s.qs.filter((_,k)=>ANS[s.id+"_"+k]===true).length; return `<button class="st" role="tab" data-s="${s.id}" aria-selected="${s.id===CUR}" style="--zc:var(${s.col})"><b>${i+1}. ${T(s.title)}</b><span>${T(s.sub)}</span><i>${ok} / ${s.qs.length}</i></button>`; }).join("");
+  $$(".st").forEach(b=>b.onclick=()=>{ CUR=b.dataset.s; render(); });
+  const st=STATIONS.find(s=>s.id===CUR), idx=STATIONS.indexOf(st), m=$("#main"); m.style.setProperty("--zc",`var(${st.col})`);
+  m.innerHTML=`<div class="intro"><h2>${T(st.title)}</h2></div><section class="sim">${SIM[st.id].html()}</section>${noteHTML(st)}
+    <section class="qs"><h3>${T(UI.qs)}</h3>${st.qs.map((_,k)=>qHTML(st,k)).join("")}</section>${idx<3?`<button class="btn big nextb" id="nx">${T(UI.next)}</button>`:""}`;
+  SIM[st.id].mount();
+  $$(".opt").forEach(b=>b.onclick=()=>answer(b, +b.dataset.i===0));
+  $$(".chk").forEach(b=>{ const inp=b.parentElement.querySelector("input"); const go=()=>{ const q=qOf(b), v=parseFloat((LANG==="en"?inp.value.replace(/,(?=\d{3}(\D|$))/g,""):inp.value).replace(/\s/g,"").replace(",",".")); if(isNaN(v)) return; answer(b, Math.abs(v-q.num)<=Math.abs(q.num)*.011); }; b.onclick=go; inp.onkeydown=e=>{ if(e.key==="Enter") go(); }; });
+  const nx=$("#nx"); if(nx) nx.onclick=()=>{ CUR=STATIONS[idx+1].id; render(); scrollTo({top:0,behavior:RM?"auto":"smooth"}); };
+}
+function qOf(el){ const id=el.closest(".q").dataset.q, [s,k]=id.split("_"); return STATIONS.find(x=>x.id===s).qs[+k]; }
+function answer(el,ok){ const box=el.closest(".q"), id=box.dataset.q, q=qOf(el); ANS[id]=ok; save();
+  box.querySelectorAll("button,input").forEach(x=>x.disabled=true);
+  box.querySelectorAll(".opt").forEach(x=>{ if(+x.dataset.i===0) x.classList.add("good"); else if(x===el) x.classList.add("wrong"); });
+  box.insertAdjacentHTML("beforeend",whyHTML(q,ok));
+  $("#score").textContent=`✓ ${good()} / ${total()} ${T(UI.score)}`;
+  const s=STATIONS.find(x=>x.id===CUR), i=$(`.st[data-s="${CUR}"] i`); if(i) i.textContent=`${s.qs.filter((_,k)=>ANS[s.id+"_"+k]===true).length} / ${s.qs.length}`; }
+function openNotes(){ $("#dh").textContent=T(UI.nb); $("#dclose").textContent=T(UI.close); $("#dsub").textContent=T(UI.dsub); $("#dnotes").innerHTML=STATIONS.map(noteHTML).join(""); $("#drawer").hidden=false; $("#dclose").focus(); }
+$("#dclose").onclick=()=>{ $("#drawer").hidden=true; };
+$("#drawer").onclick=e=>{ if(e.target.id==="drawer") $("#drawer").hidden=true; };
+addEventListener("keydown",e=>{ if(e.key==="Escape") $("#drawer").hidden=true; });
+
+render();
+</script>
